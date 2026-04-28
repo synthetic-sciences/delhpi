@@ -14,8 +14,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  // Show both auth methods immediately; config fetch can hide irrelevant ones
-  const [config, setConfig] = useState<ServerConfig>({ github_oauth_enabled: true, system_password_enabled: true });
+  // null = config not loaded yet → render skeleton instead of guessing.
+  // Optimistically showing the GitHub button before /config resolves let users
+  // click into a 500 when GITHUB_CLIENT_ID wasn't set (the default install).
+  const [config, setConfig] = useState<ServerConfig | null>(null);
 
   // If already authenticated, redirect to overview
   useEffect(() => {
@@ -29,7 +31,7 @@ export default function LoginPage() {
     fetch("/config")
       .then((r) => r.json())
       .then((data) => setConfig(data))
-      .catch(() => {});
+      .catch(() => setConfig({ github_oauth_enabled: false, system_password_enabled: true }));
   }, []);
 
   function handleGitHubLogin() {
@@ -75,8 +77,17 @@ export default function LoginPage() {
           Sign in to access your context server.
         </p>
 
+        {/* Skeleton until /config resolves — prevents clicking a button
+            for an auth method the server doesn't actually support. */}
+        {config === null && (
+          <div aria-busy="true" aria-label="Loading sign-in options">
+            <div className="w-full h-10 rounded-md bg-[#efe4d6] animate-pulse mb-4" />
+            <div className="w-full h-9 rounded-md bg-[#efe4d6] animate-pulse" />
+          </div>
+        )}
+
         {/* GitHub OAuth */}
-        {config.github_oauth_enabled && (
+        {config?.github_oauth_enabled && (
           <button
             type="button"
             onClick={handleGitHubLogin}
@@ -90,7 +101,7 @@ export default function LoginPage() {
         )}
 
         {/* Divider */}
-        {config.github_oauth_enabled && config.system_password_enabled && (
+        {config?.github_oauth_enabled && config?.system_password_enabled && (
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1 h-px bg-[#dfcdbf]" />
             <span className="text-[10px] text-[#a09488] uppercase">or</span>
@@ -99,14 +110,14 @@ export default function LoginPage() {
         )}
 
         {/* Password login */}
-        {config.system_password_enabled && (
+        {config?.system_password_enabled && (
           <form onSubmit={handlePasswordLogin}>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="System password"
-              autoFocus={!config.github_oauth_enabled}
+              autoFocus={!config?.github_oauth_enabled}
               className="w-full px-3 py-2 bg-[#f7f0e8] border border-[#dfcdbf] rounded-md text-sm text-[#2e2522] placeholder-[#a09488] focus:outline-none focus:border-[#c5b5a5] mb-3"
             />
 
@@ -125,7 +136,7 @@ export default function LoginPage() {
         )}
 
         {/* No auth configured */}
-        {config && !config.github_oauth_enabled && !config.system_password_enabled && (
+        {config !== null && !config.github_oauth_enabled && !config.system_password_enabled && (
           <p className="text-[11px] text-red-400">
             No authentication method configured. Set GITHUB_CLIENT_ID + GITHUB_CLIENT_SECRET or SYSTEM_PASSWORD.
           </p>
