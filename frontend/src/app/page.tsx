@@ -29,7 +29,10 @@ export default function LoginPage() {
   // Fetch actual server config to refine which auth methods are shown
   useEffect(() => {
     fetch("/config")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`Failed to load config: ${r.status}`);
+        return r.json();
+      })
       .then((data) => setConfig(data))
       .catch(() => setConfig({ github_oauth_enabled: false, system_password_enabled: true }));
   }, []);
