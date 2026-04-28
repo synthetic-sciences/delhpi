@@ -115,6 +115,23 @@ export async function runInit({ force = false } = {}) {
     }
   }
 
+  // Pre-flight checks run BEFORE any setup prompt so a missing daemon doesn't
+  // wipe out 5+ minutes of provider/key/password input. Reuse-path above
+  // returns early and doesn't touch Docker, so it's fine to skip the check there.
+  log.step("Pre-flight checks");
+  const docker = await dockerHealthy();
+  if (!docker.ok) {
+    log.error(`Docker isn't reachable: ${docker.reason}`);
+    log.dim("Install Docker Desktop from https://www.docker.com/products/docker-desktop/ and try again.");
+    process.exit(1);
+  }
+  log.success("Docker is running");
+  if (!(await which("git"))) {
+    log.error("git not found on PATH. Install git and re-run.");
+    process.exit(1);
+  }
+  log.success("git is available");
+
   // Path selection
   const flow = await select({
     message: "How would you like to use Delphi?",
@@ -152,21 +169,6 @@ export async function runInit({ force = false } = {}) {
   // Always prompt: it's used both as the dashboard login and as the
   // bootstrap secret that mints the CLI's API key further down.
   const systemPassword = await promptSystemPassword();
-
-  // Pre-flight checks
-  log.step("Pre-flight checks");
-  const docker = await dockerHealthy();
-  if (!docker.ok) {
-    log.error(`Docker isn't reachable: ${docker.reason}`);
-    log.dim("Install Docker Desktop from https://www.docker.com/products/docker-desktop/ and try again.");
-    process.exit(1);
-  }
-  log.success("Docker is running");
-  if (!(await which("git"))) {
-    log.error("git not found on PATH. Install git and re-run.");
-    process.exit(1);
-  }
-  log.success("git is available");
 
   // Source + .env
   log.step("Fetching source");
