@@ -172,8 +172,11 @@ class OpenAIEmbeddingProvider(_HttpEmbeddingProvider):
 
     # Special-token literals that tiktoken's cl100k/o200k bases reject by
     # default. Sourced from tiktoken's encoding registry — the user-visible
-    # ones that show up in real-world source/text. We deliberately replace
-    # rather than strip so byte offsets stay roughly the same length.
+    # ones that show up in real-world source/text. We replace (rather than
+    # strip) so the sanitized chunk still carries a visible marker downstream
+    # — useful when retrieved snippets are shown to users — and so the
+    # surrounding tokenization is less perturbed than by a hard delete. The
+    # placeholder is intentionally not length-matched to the literal.
     _SPECIAL_TOKEN_LITERALS = (
         "<|endoftext|>",
         "<|endofprompt|>",
@@ -210,7 +213,7 @@ class OpenAIEmbeddingProvider(_HttpEmbeddingProvider):
         replaced = 0
         for t in texts:
             s = self._sanitize_special_tokens(t)
-            if s is not t and s != t:
+            if s != t:
                 replaced += 1
             sanitized.append(s)
         if replaced:

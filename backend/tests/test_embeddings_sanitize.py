@@ -9,13 +9,11 @@ boundary; these tests pin that behavior.
 
 from __future__ import annotations
 
-import os
-
 import pytest
 
-# Avoid touching the real OPENAI_API_KEY when constructing the provider.
-os.environ.setdefault("OPENAI_API_KEY", "sk-test-not-real")
-
+# These tests exercise ``OpenAIEmbeddingProvider._sanitize_special_tokens``
+# as a classmethod — no provider instance is constructed and no network/env
+# state is touched.
 from synsc.embeddings.providers import OpenAIEmbeddingProvider
 
 
