@@ -154,6 +154,15 @@ class OpenAIEmbeddingProvider(_HttpEmbeddingProvider):
     """OpenAI embeddings (text-embedding-3-small by default).
 
     https://platform.openai.com/docs/api-reference/embeddings
+
+    Source files in the wild (e.g. LLM training/eval repos, model fixtures)
+    sometimes contain literal tiktoken special-token strings such as
+    ``<|endoftext|>``. The OpenAI tokenizer rejects these with
+    ``Encountered text corresponding to disallowed special token`` and the
+    REST API exposes no equivalent of the python client's
+    ``disallowed_special=()`` flag. We sanitize input chunks at the provider
+    boundary, replacing each known special-token literal with
+    ``[ANGLE_BRACKET_TOKEN_FILTERED]`` before POSTing.
     """
 
     name = "openai"
@@ -161,15 +170,58 @@ class OpenAIEmbeddingProvider(_HttpEmbeddingProvider):
     _api_key_env = "OPENAI_API_KEY"
     _endpoint = "https://api.openai.com/v1/embeddings"
 
+    # Special-token literals that tiktoken's cl100k/o200k bases reject by
+    # default. Sourced from tiktoken's encoding registry — the user-visible
+    # ones that show up in real-world source/text. We deliberately replace
+    # rather than strip so byte offsets stay roughly the same length.
+    _SPECIAL_TOKEN_LITERALS = (
+        "<|endoftext|>",
+        "<|endofprompt|>",
+        "<|im_start|>",
+        "<|im_end|>",
+        "<|im_sep|>",
+        "<|fim_prefix|>",
+        "<|fim_middle|>",
+        "<|fim_suffix|>",
+    )
+    _SPECIAL_TOKEN_PLACEHOLDER = "[ANGLE_BRACKET_TOKEN_FILTERED]"
+
     def __init__(self) -> None:
         super().__init__()
         # Allow overriding the model (e.g. text-embedding-3-large)
         self.model_name = os.getenv("OPENAI_EMBEDDING_MODEL", self.model_name)
 
+    @classmethod
+    def _sanitize_special_tokens(cls, text: str) -> str:
+        """Replace OpenAI tiktoken special-token literals with a placeholder.
+
+        Returns ``text`` unchanged if no known special token is present.
+        """
+        if not text or "<|" not in text:
+            return text
+        sanitized = text
+        for literal in cls._SPECIAL_TOKEN_LITERALS:
+            if literal in sanitized:
+                sanitized = sanitized.replace(literal, cls._SPECIAL_TOKEN_PLACEHOLDER)
+        return sanitized
+
     def _embed_batch(self, texts: list[str]) -> list[list[float]]:
+        sanitized: list[str] = []
+        replaced = 0
+        for t in texts:
+            s = self._sanitize_special_tokens(t)
+            if s is not t and s != t:
+                replaced += 1
+            sanitized.append(s)
+        if replaced:
+            logger.debug(
+                "Sanitized %d/%d OpenAI input chunks containing special-token literals",
+                replaced,
+                len(texts),
+            )
         body = {
             "model": self.model_name,
-            "input": texts,
+            "input": sanitized,
             "dimensions": self.dimension,
             "encoding_format": "float",
         }
