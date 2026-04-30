@@ -9,14 +9,14 @@ Extracts:
 """
 
 import hashlib
-import logging
 import re
 from pathlib import Path
 from typing import Any
 
 import fitz  # PyMuPDF
+import structlog
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class PDFProcessingError(Exception):
@@ -96,24 +96,23 @@ def calculate_pdf_hash(pdf_path: Path | str) -> str:
     return sha256_hash.hexdigest()
 
 
-def _strip_nul_chars(text: str) -> str:
+def _strip_nul_chars(text: str) -> tuple[str, int]:
     """Remove NUL (0x00) bytes from a string.
 
     Postgres rejects NUL in ``text`` columns ("A string literal cannot
     contain NUL (0x00) characters."), and PyMuPDF text extraction does
     occasionally emit them on malformed PDFs. Strip them at the boundary
     so downstream chunkers, normalizers, and DB writers all see clean
-    text. Logs a warning when any were removed so the truncation isn't
-    silent.
+    text.
+
+    Returns ``(cleaned_text, removed_count)`` so callers can log once with
+    PDF-level context (path/hash) — logging here would lose that context
+    and produce one line per NUL-bearing chunk on concurrent indexes.
     """
     if not text or "\x00" not in text:
-        return text
+        return text, 0
     cleaned = text.replace("\x00", "")
-    removed = len(text) - len(cleaned)
-    logger.warning(
-        "Stripped %d NUL byte(s) from extracted PDF text", removed,
-    )
-    return cleaned
+    return cleaned, len(text) - len(cleaned)
 
 
 def normalize_pdf_text(text: str) -> str:
@@ -128,8 +127,11 @@ def normalize_pdf_text(text: str) -> str:
         return ""
 
     # Strip NUL bytes first so the rest of the pipeline (and any DB
-    # insert downstream) doesn't have to worry about them.
-    text = _strip_nul_chars(text)
+    # insert downstream) doesn't have to worry about them. Defensive:
+    # process_pdf() already sanitizes pages at extraction, but
+    # normalize_pdf_text is also a public helper for callers wiring in
+    # their own raw page text.
+    text, _ = _strip_nul_chars(text)
 
     # Fix hyphenation at line breaks (word- \n continuation)
     text = re.sub(r"(\w)-\s*\n\s*(\w)", r"\1\2", text)
@@ -355,19 +357,33 @@ def process_pdf(
         }
         extracted.page_count = doc.page_count
 
-        # Extract text from all pages
-        pages = []
+        # Extract text from all pages, sanitizing each page once at the
+        # extraction boundary. Doing it here (instead of only on
+        # ``full_text``) means downstream calls — ``normalize_pdf_text``
+        # on first/first-two pages, sectioning, etc. — all operate on
+        # already-clean text and can't emit duplicate strip logs for the
+        # same PDF.
+        pages: list[str] = []
+        nul_total = 0
         for page in doc:
-            pages.append(page.get_text())
-        
+            page_text, removed = _strip_nul_chars(page.get_text())
+            nul_total += removed
+            pages.append(page_text)
+
         doc.close()
 
-        # Strip NUL bytes once at the extraction boundary — keeps
-        # extracted.full_text safe for direct DB inserts (Postgres text
-        # columns reject 0x00) and lets every downstream consumer trust
-        # the field. normalize_pdf_text() also strips defensively for
-        # callers who go straight from raw page text to the normalizer.
-        full_text = _strip_nul_chars("\n\n".join(pages))
+        if nul_total:
+            # Log once per PDF, with enough context to trace back even
+            # under concurrent indexing.
+            logger.warning(
+                "Stripped NUL byte(s) from extracted PDF text",
+                pdf_path=str(pdf_path),
+                pdf_hash=extracted.pdf_hash,
+                nul_bytes=nul_total,
+                page_count=extracted.page_count,
+            )
+
+        full_text = "\n\n".join(pages)
         extracted.full_text = full_text
 
         # Normalize text
