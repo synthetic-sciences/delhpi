@@ -17,6 +17,10 @@ from synsc.config import get_config
 
 logger = logging.getLogger(__name__)
 
+# Lower bound for OOM-retry. Allow callers to override via env for very tight
+# memory environments (single-batch fallback). Must be >= 1.
+MIN_EMBED_BATCH_SIZE = max(1, int(os.getenv("EMBEDDING_MIN_BATCH_SIZE", "1")))
+
 
 class EmbeddingGenerator:
     """Generate embeddings using a local sentence-transformers model.
@@ -150,7 +154,12 @@ class EmbeddingGenerator:
     def generate(self, texts: list[str]) -> np.ndarray:
         """Generate embeddings for a list of texts.
 
-        On CUDA OOM, halves the batch size and retries (down to 8).
+        On OOM, halves the batch size and retries down to ``MIN_EMBED_BATCH_SIZE``
+        (default 1; override via ``EMBEDDING_MIN_BATCH_SIZE``). The configured
+        ``EMBEDDING_BATCH_SIZE`` is honored as the starting point even when it
+        falls below the previous hardcoded floor of 8 — useful on low-RAM CPU
+        environments. The final error message reflects ``self.device`` so CPU
+        runs don't get a misleading "CUDA OOM" message.
         """
         if not texts:
             return np.array([]).reshape(0, self.dimension)
@@ -163,8 +172,9 @@ class EmbeddingGenerator:
             except Exception:
                 pass
 
+        min_batch = max(1, min(MIN_EMBED_BATCH_SIZE, self.batch_size))
         batch_size = self.batch_size
-        while batch_size >= 8:
+        while batch_size >= min_batch:
             try:
                 embeddings = self.model.encode(
                     texts,
@@ -179,16 +189,27 @@ class EmbeddingGenerator:
                     self.batch_size = batch_size
                 return embeddings
             except RuntimeError as e:
-                if "out of memory" in str(e).lower() and batch_size > 8:
-                    import torch
-                    torch.cuda.empty_cache()
-                    batch_size //= 2
+                if "out of memory" in str(e).lower() and batch_size > min_batch:
+                    if self.device == "cuda":
+                        try:
+                            import torch
+                            torch.cuda.empty_cache()
+                        except Exception:
+                            pass
+                    new_batch = max(min_batch, batch_size // 2)
                     logger.warning(
-                        "CUDA OOM, retrying with smaller batch: %d", batch_size,
+                        "%s OOM at batch_size=%d, retrying with smaller batch: %d",
+                        self.device.upper(),
+                        batch_size,
+                        new_batch,
                     )
+                    batch_size = new_batch
                 else:
                     raise
-        raise RuntimeError("CUDA OOM even at batch_size=8")
+        oom_kind = "CUDA OOM" if self.device == "cuda" else "OOM"
+        raise RuntimeError(
+            f"{oom_kind} on device={self.device} even at batch_size={min_batch}"
+        )
 
     def generate_single(self, text: str) -> np.ndarray:
         """Generate embedding for a single text."""
