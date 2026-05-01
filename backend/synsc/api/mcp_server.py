@@ -618,7 +618,7 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def get_equations(paper_id: str) -> dict[str, Any]:
-        """Extract all equations from paper.
+        """Extract all equations from a paper.
 
         Args:
             paper_id: Paper identifier
@@ -642,7 +642,7 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def get_code_snippets(paper_id: str) -> dict[str, Any]:
-        """Extract all code snippets from paper.
+        """Extract all code snippets from a paper.
 
         Args:
             paper_id: Paper identifier
@@ -903,7 +903,7 @@ Provides deep context to AI agents through:
     async def search_datasets(query: str, top_k: int = 10) -> dict[str, Any]:
         """Semantic search over dataset cards.
 
-        sentence-transformers embeddings to find relevant datasets by meaning. Searches indexed dataset docs (README cards).
+        Uses sentence-transformers embeddings to find relevant datasets by meaning. Searches indexed dataset docs (README cards).
 
         Args:
             query: Natural language search query
