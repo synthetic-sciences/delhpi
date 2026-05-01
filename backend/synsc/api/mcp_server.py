@@ -179,20 +179,18 @@ Provides deep context to AI agents through:
 
     @server.tool()
     async def index_repository(url: str, branch: str = "main", deep_index: bool = False, force_reindex: bool = False) -> dict[str, Any]:
-        """Index a GitHub repository for semantic code search.
+        """Index GitHub repo for semantic code search.
 
-        If the repository was previously indexed and has new commits, performs a
-        diff-aware re-index — only changed files are re-processed, preserving the
-        repo_id and all user collection links.
+        Previously indexed + new commits → diff-aware re-index. Only changed files re-processed; repo_id and user collection links preserved.
 
         Args:
-            url: GitHub repository URL (e.g., "facebook/react" or full URL)
+            url: GitHub repo URL (e.g., "facebook/react" or full URL)
             branch: Branch to index (default: main)
             deep_index: Full AST chunking per function/class (slower, higher quality)
-            force_reindex: Skip diff detection and fully re-index from scratch
+            force_reindex: Skip diff detection, fully re-index from scratch
 
         Returns:
-            Dictionary with repo_id, files_indexed, chunks_created, diff_stats, etc.
+            Dict with repo_id, files_indexed, chunks_created, diff_stats, etc.
         """
         import asyncio
         from synsc.services.indexing_service import IndexingService
@@ -211,14 +209,14 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def list_repositories(limit: int = 50, offset: int = 0) -> dict[str, Any]:
-        """List all indexed repositories.
+        """List all indexed repos.
 
         Args:
-            limit: Maximum repositories to return (max 200)
+            limit: Max repos to return (max 200)
             offset: Pagination offset
 
         Returns:
-            Dictionary with repositories list and total count
+            Dict with repos list and total count
         """
         from synsc.services.indexing_service import IndexingService
 
@@ -234,13 +232,13 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def get_repository(repo_id: str) -> dict[str, Any]:
-        """Get detailed information about an indexed repository.
+        """Get details on indexed repo.
 
         Args:
-            repo_id: Repository identifier
+            repo_id: Repo identifier
 
         Returns:
-            Repository details including stats, languages, etc.
+            Repo details: stats, languages, etc.
         """
         from synsc.services.indexing_service import IndexingService
 
@@ -252,10 +250,10 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def delete_repository(repo_id: str) -> dict[str, Any]:
-        """Delete an indexed repository.
+        """Delete indexed repo.
 
         Args:
-            repo_id: Repository identifier
+            repo_id: Repo identifier
 
         Returns:
             Success status
@@ -276,17 +274,17 @@ Provides deep context to AI agents through:
         file_pattern: str | None = None,
         top_k: int = 10,
     ) -> dict[str, Any]:
-        """Search code using natural language or keywords.
+        """Search code via natural language or keywords.
 
         Args:
             query: Natural language search query
             repo_ids: Optional list of repo IDs to search
             language: Filter by programming language
             file_pattern: Glob pattern for file paths
-            top_k: Number of results to return
+            top_k: Num results to return
 
         Returns:
-            Search results with code snippets and relevance scores
+            Search results with code snippets + relevance scores
         """
         import asyncio
         from synsc.services.search_service import SearchService
@@ -311,16 +309,16 @@ Provides deep context to AI agents through:
         start_line: int | None = None,
         end_line: int | None = None,
     ) -> dict[str, Any]:
-        """Get file content from an indexed repository.
+        """Get file content from indexed repo.
 
         Args:
-            repo_id: Repository identifier
-            file_path: Path to file within repository
-            start_line: Optional starting line (1-indexed)
-            end_line: Optional ending line
+            repo_id: Repo identifier
+            file_path: Path to file within repo
+            start_line: Optional start line (1-indexed)
+            end_line: Optional end line
 
         Returns:
-            File content and metadata
+            File content + metadata
         """
         from synsc.services.search_service import SearchService
 
@@ -341,17 +339,17 @@ Provides deep context to AI agents through:
         language: str | None = None,
         top_k: int = 20,
     ) -> dict[str, Any]:
-        """Search for code symbols (functions, classes, methods).
+        """Search code symbols (functions, classes, methods).
 
         Args:
-            name: Symbol name to search for (partial match)
+            name: Symbol name (partial match)
             repo_ids: Optional list of repo IDs to search
             symbol_type: Filter by type (function, class, method)
             language: Filter by programming language
-            top_k: Number of results to return
+            top_k: Num results to return
 
         Returns:
-            Matching symbols with signatures and locations
+            Matching symbols with signatures + locations
         """
         from synsc.services.symbol_service import SymbolService
 
@@ -369,9 +367,9 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def analyze_repository(repo_id: str) -> dict[str, Any]:
-        """Get comprehensive analysis of an indexed repository.
+        """Comprehensive analysis of indexed repo.
 
-        Provides deep understanding including:
+        Includes:
         - Directory structure with annotations
         - Entry points (main files, CLI, API endpoints)
         - Dependencies from manifest files
@@ -379,10 +377,10 @@ Provides deep context to AI agents through:
         - Architecture pattern detection
 
         Args:
-            repo_id: Repository identifier
+            repo_id: Repo identifier
 
         Returns:
-            Comprehensive analysis results
+            Analysis results
         """
         from synsc.services.analysis_service import AnalysisService
 
@@ -398,15 +396,14 @@ Provides deep context to AI agents through:
         max_depth: int = 4,
         annotate: bool = True,
     ) -> dict[str, Any]:
-        """Get the directory structure of an indexed repository.
+        """Get directory structure of indexed repo.
 
-        Returns a tree representation of the repository's file structure
-        with optional annotations explaining the purpose of each directory.
+        Tree representation of repo file structure; optional per-directory purpose annotations.
 
         Args:
-            repo_id: Repository identifier (UUID)
-            max_depth: Maximum directory depth to show (default: 4)
-            annotate: Whether to add purpose annotations to directories (default: true)
+            repo_id: Repo identifier (UUID)
+            max_depth: Max directory depth (default: 4)
+            annotate: Add purpose annotations to directories (default: true)
         """
         from synsc.services.analysis_service import AnalysisService
 
@@ -420,10 +417,9 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def get_symbol(symbol_id: str) -> dict[str, Any]:
-        """Get detailed information about a specific code symbol.
+        """Get details on specific code symbol.
 
-        Returns complete symbol details including full docstring,
-        parameters with types, return type, and decorators.
+        Full docstring, parameters with types, return type, decorators.
 
         Args:
             symbol_id: Symbol identifier (UUID from search_symbols)
@@ -438,13 +434,12 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def remove_from_collection(repo_id: str) -> dict[str, Any]:
-        """Remove a repository from your collection without deleting it.
+        """Remove repo from your collection without deleting it.
 
-        This removes the repo from YOUR searchable collection without deleting
-        the actual indexed data. The repo remains available for other users.
+        Removes repo from YOUR searchable collection; indexed data preserved. Repo remains available for other users.
 
         Args:
-            repo_id: Repository identifier (UUID)
+            repo_id: Repo identifier (UUID)
         """
         from synsc.services.indexing_service import IndexingService
 
@@ -460,21 +455,20 @@ Provides deep context to AI agents through:
 
     @server.tool()
     async def index_paper(source: str) -> dict[str, Any]:
-        """Index a research paper from arXiv or local PDF.
+        """Index research paper from arXiv or local PDF.
 
-        Supports multiple formats:
+        Formats:
         - arXiv URLs: "https://arxiv.org/abs/2401.12345"
         - arXiv IDs: "2401.12345"
         - Local PDF: "/path/to/paper.pdf"
 
-        Features global deduplication - if paper already indexed,
-        returns existing paper ID instantly.
+        Global dedup — paper already indexed → returns existing paper ID instantly.
 
         Args:
             source: arXiv URL/ID or local PDF path
 
         Returns:
-            Dictionary with paper_id, title, authors, chunks, etc.
+            Dict with paper_id, title, authors, chunks, etc.
         """
         import asyncio
         import tempfile
@@ -528,11 +522,11 @@ Provides deep context to AI agents through:
         """List all indexed papers.
 
         Args:
-            limit: Maximum papers to return (max 200)
+            limit: Max papers to return (max 200)
             offset: Pagination offset
 
         Returns:
-            Dictionary with papers list and total count
+            Dict with papers list and total count
         """
         from synsc.services.paper_service import get_paper_service
 
@@ -549,14 +543,14 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def get_paper(paper_id: str, section: str | None = None) -> dict[str, Any]:
-        """Get full paper content, optionally filtered to a single section.
+        """Get full paper content; optional single-section filter.
 
         Args:
             paper_id: Paper identifier.
             section: Optional section filter — one of 'abstract',
                 'introduction', 'methods', 'results', 'discussion',
-                'conclusion', 'references', 'related work', or a regex
-                that matches `chunk.section_title`.
+                'conclusion', 'references', 'related work', or regex
+                matching `chunk.section_title`.
         """
         from synsc.services.paper_service import get_paper_service
 
@@ -577,11 +571,11 @@ Provides deep context to AI agents through:
 
     @server.tool()
     async def search_papers(query: str, top_k: int = 5) -> dict[str, Any]:
-        """Search papers using semantic search.
+        """Semantic search over papers.
 
         Args:
             query: Natural language search query
-            top_k: Number of results to return
+            top_k: Num results to return
 
         Returns:
             Matching papers with relevance scores
@@ -600,13 +594,13 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def get_citations(paper_id: str) -> dict[str, Any]:
-        """Extract all citations from a paper.
+        """Extract all citations from paper.
 
         Args:
             paper_id: Paper identifier
 
         Returns:
-            List of citations with context and links to indexed papers
+            List of citations with context + links to indexed papers
         """
         from synsc.services.paper_service import get_paper_service
 
@@ -682,15 +676,15 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def generate_report(paper_id: str) -> dict[str, Any]:
-        """Generate comprehensive markdown report for a paper.
+        """Generate markdown report for paper.
 
-        Creates a detailed report optimized for LLM consumption.
+        Detailed report optimized for LLM consumption.
 
         Args:
             paper_id: Paper identifier
 
         Returns:
-            Comprehensive markdown report
+            Markdown report
         """
         from synsc.services.paper_service import get_paper_service
 
@@ -746,15 +740,13 @@ Provides deep context to AI agents through:
     def compare_papers(paper_ids: list[str]) -> dict[str, Any]:
         """Compare multiple papers side-by-side.
 
-        Returns structured data for each paper including title, authors,
-        abstract, section headings, citation count, and equation count.
-        The calling LLM should synthesize the comparison from this data.
+        Returns structured per-paper data: title, authors, abstract, section headings, citation count, equation count. Calling LLM synthesizes comparison.
 
         Args:
             paper_ids: List of 2-5 paper identifiers
 
         Returns:
-            Structured comparison data for each paper
+            Structured comparison data per paper
         """
         from synsc.services.paper_service import get_paper_service
 
@@ -800,10 +792,9 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def delete_paper(paper_id: str) -> dict[str, Any]:
-        """Delete an indexed paper and all associated data.
+        """Delete indexed paper + all associated data.
 
-        Removes the paper, its chunks, embeddings, citations, equations,
-        and code snippets.
+        Removes paper, chunks, embeddings, citations, equations, code snippets.
 
         Args:
             paper_id: Paper identifier (UUID)
@@ -827,23 +818,21 @@ Provides deep context to AI agents through:
 
     @server.tool()
     async def index_dataset(source: str) -> dict[str, Any]:
-        """Index a HuggingFace dataset for semantic search.
+        """Index HuggingFace dataset for semantic search.
 
-        Supports multiple formats:
+        Formats:
         - Dataset IDs: "imdb", "openai/gsm8k"
         - HuggingFace URLs: "https://huggingface.co/datasets/openai/gsm8k"
 
-        Indexes the dataset card (README documentation) for semantic search.
-        Does NOT download actual dataset rows.
+        Indexes dataset card (README docs) for semantic search. Does NOT download actual dataset rows.
 
-        Features global deduplication - if dataset already indexed,
-        returns existing dataset ID instantly.
+        Global dedup — dataset already indexed → returns existing dataset ID instantly.
 
         Args:
             source: HuggingFace dataset ID or URL
 
         Returns:
-            Dictionary with dataset_id, name, hf_id, chunks, etc.
+            Dict with dataset_id, name, hf_id, chunks, etc.
         """
         import asyncio
         from synsc.services.dataset_service import get_dataset_service
@@ -867,14 +856,14 @@ Provides deep context to AI agents through:
     def list_datasets(limit: int = 50, offset: int = 0) -> dict[str, Any]:
         """List all indexed HuggingFace datasets.
 
-        Shows datasets in your collection that have been indexed for search.
+        Datasets in your collection indexed for search.
 
         Args:
-            limit: Maximum number of datasets to return (default: 50, max 200)
-            offset: Number of datasets to skip for pagination
+            limit: Max datasets to return (default: 50, max 200)
+            offset: Datasets to skip for pagination
 
         Returns:
-            Dictionary with datasets list and total count
+            Dict with datasets list and total count
         """
         from synsc.services.dataset_service import get_dataset_service
 
@@ -888,16 +877,15 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def get_dataset(dataset_id: str) -> dict[str, Any]:
-        """Get detailed information about an indexed dataset.
+        """Get details on indexed dataset.
 
-        Returns dataset metadata including features, splits, languages,
-        and all indexed chunks from the dataset card.
+        Dataset metadata: features, splits, languages, all indexed chunks from dataset card.
 
         Args:
             dataset_id: Dataset identifier (UUID)
 
         Returns:
-            Complete dataset data with metadata and chunks
+            Complete dataset data with metadata + chunks
         """
         from synsc.services.dataset_service import get_dataset_service
 
@@ -913,14 +901,13 @@ Provides deep context to AI agents through:
 
     @server.tool()
     async def search_datasets(query: str, top_k: int = 10) -> dict[str, Any]:
-        """Search datasets using semantic search over dataset cards.
+        """Semantic search over dataset cards.
 
-        Uses sentence-transformers embeddings to find relevant datasets by meaning.
-        Searches through indexed dataset documentation (README cards).
+        Uses sentence-transformers embeddings to find relevant datasets by meaning. Searches indexed dataset docs (README cards).
 
         Args:
             query: Natural language search query
-            top_k: Number of results to return (default: 10)
+            top_k: Num results to return (default: 10)
 
         Returns:
             Matching dataset chunks with relevance scores
@@ -937,10 +924,10 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def delete_dataset(dataset_id: str) -> dict[str, Any]:
-        """Delete an indexed dataset.
+        """Delete indexed dataset.
 
-        For public datasets: removes from your collection (data stays for others).
-        For private/gated datasets: fully deletes all data.
+        Public datasets: removes from your collection (data stays for others).
+        Private/gated datasets: fully deletes all data.
 
         Args:
             dataset_id: Dataset identifier (UUID)
@@ -971,10 +958,7 @@ Provides deep context to AI agents through:
     ) -> dict[str, Any]:
         """RAG synthesis across indexed sources. Modes: quick / deep / oracle.
 
-        Requires a configured research provider (Gemini API key) on the Delphi
-        server. If the server has no provider configured, this tool returns
-        ``{"success": False, "error_code": "provider_not_configured"}`` —
-        relay that message to the user; do not retry.
+        Requires configured research provider (Gemini API key) on Delphi server. No provider configured → tool returns ``{"success": False, "error_code": "provider_not_configured"}`` — relay message to user; do not retry.
 
         Args:
             query: Research question or topic.
@@ -985,10 +969,7 @@ Provides deep context to AI agents through:
             source_types: Optional filter: any of 'repo', 'paper', 'dataset'.
             k: Override retrieval top_k.
 
-        On error, the response shape is always
-        ``{"success": False, "error_code": <stable-string>, "message": <human-readable>}``
-        with one of the codes: ``invalid_mode``, ``provider_not_configured``,
-        ``internal_error``.
+        Error response shape: ``{"success": False, "error_code": <stable-string>, "message": <human-readable>}`` with code ``invalid_mode``, ``provider_not_configured``, or ``internal_error``.
         """
         from synsc.config import get_config
         from synsc.services.research_service import ResearchService
@@ -1053,15 +1034,15 @@ Provides deep context to AI agents through:
         max_matches: int = 100,
         context_lines: int = 2,
     ) -> dict[str, Any]:
-        """Regex search within a single indexed source.
+        """Regex search within single indexed source.
 
         Args:
-            source_id: Repository or paper ID.
+            source_id: Repo or paper ID.
             pattern: Python regex pattern.
             source_type: 'repo' or 'paper'.
-            path_prefix: Optional path prefix to scope the search.
+            path_prefix: Optional path prefix to scope search.
             max_matches: Upper bound on matches returned (default 100).
-            context_lines: Lines of context above / below each match (default 2).
+            context_lines: Lines of context above/below each match (default 2).
         """
         from synsc.services.grep_service import GrepService
 
@@ -1109,15 +1090,13 @@ Provides deep context to AI agents through:
     ) -> dict[str, Any]:
         """Unified search across indexed code + papers + datasets.
 
-        Modes: 'precise' (fewer, higher quality), 'thorough' (more results),
-        'web' (fallback, returns empty stub). Accepts Nia aliases: 'targeted'
-        maps to 'precise', 'universal' maps to 'thorough'.
+        Modes: 'precise' (fewer, higher quality), 'thorough' (more results), 'web' (fallback, returns empty stub). Nia aliases: 'targeted' → 'precise', 'universal' → 'thorough'.
 
         Args:
             query: Natural language query.
-            source_ids: Optional list of source IDs to scope the search.
+            source_ids: Optional list of source IDs to scope search.
             source_types: Filter: any of 'repo', 'paper', 'dataset'.
-            k: Number of hits (default 10, max 100).
+            k: Num hits (default 10, max 100).
             mode: 'precise' / 'thorough' / 'web' / 'targeted' / 'universal'.
         """
         from synsc.services.source_service import unified_search
@@ -1210,7 +1189,7 @@ Provides deep context to AI agents through:
 
     @server.tool()
     def list_sources(source_type: str | None = None) -> dict[str, Any]:
-        """List indexed sources, optionally filtered by type.
+        """List indexed sources; optional type filter.
 
         Args:
             source_type: Optional filter: 'repo', 'paper', 'dataset'.
@@ -1238,7 +1217,7 @@ Provides deep context to AI agents through:
         start_line: int | None = None,
         end_line: int | None = None,
     ) -> dict[str, Any]:
-        """Read content from an indexed source.
+        """Read content from indexed source.
 
         - paper: supports ``section=`` (canonical token or regex).
         - repo:  requires ``path=``; optional ``start_line``/``end_line``.
@@ -1249,7 +1228,7 @@ Provides deep context to AI agents through:
             path: Required for repo reads.
             section: Optional for paper reads — 'abstract', 'introduction',
                 'methods', 'results', 'discussion', 'conclusion', 'references',
-                'related work', or a regex.
+                'related work', or regex.
             start_line: Repo read — optional 1-indexed start line.
             end_line: Repo read — optional end line.
         """
@@ -1336,16 +1315,16 @@ Provides deep context to AI agents through:
         max_depth: int = 4,
         annotate: bool = True,
     ) -> dict[str, Any]:
-        """Browse the directory structure of an indexed repository source.
+        """Browse directory structure of indexed repo source.
 
-        Two modes:
+        Modes:
         - 'tree' (default): recursive tree view with optional annotations.
         - 'ls': flat single-level listing at ``path`` — equivalent to ``ls``.
 
         Args:
-            source_id: Repository identifier.
+            source_id: Repo identifier.
             action: 'tree' or 'ls'.
-            path: For ``action='ls'``, the directory path (default root).
+            path: For ``action='ls'``, directory path (default root).
             max_depth: For ``action='tree'``, max depth (default 4).
             annotate: For ``action='tree'``, attach directory purpose annotations.
         """
